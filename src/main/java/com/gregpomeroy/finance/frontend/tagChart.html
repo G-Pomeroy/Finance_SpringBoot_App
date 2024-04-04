@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Transaction Tags Pie Chart</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+<div class="navbar">
+  <a class="active" href="index.html">Home</a>
+  <a href="submitTransaction.html">Transactions</a>
+  <a href="investments.html">Investments</a>
+  <a href="categoryChart.html">Account Tracking</a>
+  <a href="tagChart.html">Spending Insight</a>
+</div>
+<div class="main-content">
+  <h1>Spending Insights</h1>
+  <div style="width: 50%;">
+    <canvas id="tagsPieChart"></canvas>
+  </div>
+</div>
+<script>
+  function fetchAndRenderPieChart() {
+    fetch('http://localhost:8080/transactions')
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Failed to fetch transaction data.');
+              }
+              return response.json();
+            })
+            .then(data => {
+              const tagAmountMap = {};
+              data.forEach(transaction => {
+                transaction.tags.forEach(tag => {
+                  if (tag in tagAmountMap) {
+                    tagAmountMap[tag] += transaction.amount;
+                  } else {
+                    tagAmountMap[tag] = transaction.amount;
+                  }
+                });
+              });
+
+              const labels = Object.keys(tagAmountMap);
+              const amounts = Object.values(tagAmountMap);
+
+              renderPieChart(labels, amounts);
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('Failed to fetch transaction data.');
+            });
+  }
+
+  function renderPieChart(labels, amounts) {
+    const ctx = document.getElementById('tagsPieChart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Transaction Tags',
+          data: amounts,
+          backgroundColor: [
+            'rgba(255, 99, 132, 0.6)',
+            'rgba(54, 162, 235, 0.6)',
+            'rgba(255, 206, 86, 0.6)',
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(153, 102, 255, 0.6)',
+            'rgba(255, 159, 64, 0.6)',
+            'rgba(255, 99, 132, 0.6)'
+          ],
+          borderColor: [
+            'rgba(255, 99, 132, 1)',
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(153, 102, 255, 1)',
+            'rgba(255, 159, 64, 1)',
+            'rgba(255, 99, 132, 1)'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false
+      }
+    });
+  }
+
+  fetchAndRenderPieChart();
+</script>
+</body>
+</html>

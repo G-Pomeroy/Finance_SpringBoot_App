@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Chart</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+<div class="navbar">
+    <a class="active" href="index.html">Home</a>
+    <a href="submitTransaction.html">Transactions</a>
+    <a href="investments.html">Investments</a>
+    <a href="categoryChart.html">Account Tracking</a>
+    <a href="tagChart.html">Spending Insight</a>
+</div>
+<div class="main-content">
+<canvas id="expenseChart" width="400" height="400"></canvas>
+</div>
+<script>
+    fetch('http://localhost:8080/transactions')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch transaction data.');
+            }
+            return response.json();
+        })
+        .then(data => {
+            const groupedTransactions = groupTransactionsByCategory(data);
+
+            const categoryLabels = Object.keys(groupedTransactions);
+            const categoryTotals = categoryLabels.map(category => {
+                const transactions = groupedTransactions[category];
+                return transactions.reduce((total, transaction) => total + transaction.amount, 0);
+            });
+
+            renderChart(categoryLabels, categoryTotals);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to fetch transaction data.');
+        });
+
+    function groupTransactionsByCategory(transactions) {
+        return transactions.reduce((grouped, transaction) => {
+            const category = transaction.category;
+            if (!grouped[category]) {
+                grouped[category] = [];
+            }
+            grouped[category].push(transaction);
+            return grouped;
+        }, {});
+    }
+
+    function renderChart(labels, amounts) {
+        const canvas = document.getElementById('expenseChart');
+        canvas.width = window.innerWidth * 0.8;
+        canvas.height = window.innerHeight * 0.6;
+
+        const ctx = canvas.getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Category Totals',
+                    data: amounts,
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true
+                        }
+                    }]
+                }
+            }
+        });
+    }
+
+</script>
+</body>
+</html>

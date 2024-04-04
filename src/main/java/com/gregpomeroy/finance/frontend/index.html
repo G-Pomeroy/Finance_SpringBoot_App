@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transactions Page</title>
+    <style>
+
+    </style>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+<div class="navbar">
+    <a class="active" href="index.html">Home</a>
+    <a href="submitTransaction.html">Transactions</a>
+    <a href="investments.html">Investments</a>
+    <a href="categoryChart.html">Account Tracking</a>
+    <a href="tagChart.html">Spending Insight</a>
+</div>
+<div class="main-content">
+<h2>All Transactions</h2>
+<div id="transactionsContainer">
+<table id="transactionsTable">
+    <thead>
+    <tr>
+        <th>Amount</th>
+        <th>Category</th>
+        <th>Tags</th>
+        <th>Action</th>
+    </tr>
+    </thead>
+    <tbody id="transactionsBody">
+    </tbody>
+</table>
+</div>
+
+<div id="editTransaction" style="display: none;">
+    <h2>Edit Transaction</h2>
+    <form id="editTransactionForm">
+        <label>Amount:</label>
+        <input type="number" id="editAmount" required>
+
+        <label>Category:</label>
+        <input type="text" id="editCategory" required>
+
+        <label>Tags:</label>
+        <input type="text" id="editTags" required>
+        <input type="hidden" id="editTransactionId" name="editTransactionId">
+
+        <button type="submit">Save Changes</button>
+    </form>
+</div>
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+
+        let transactions = [];
+
+        fetch('http://localhost:8080/transactions')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch transaction data.');
+                }
+                return response.json();
+            })
+            .then(data => {
+                transactions = data;
+                displayTransactions(transactions);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to fetch transaction data.');
+            });
+
+        function displayTransactions(transactions) {
+            const transactionsBody = document.getElementById("transactionsBody");
+
+            transactionsBody.innerHTML = "";
+
+            transactions.forEach(transaction => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                <td>$${transaction.amount.toFixed(2)}</td>
+                <td>${transaction.category}</td>
+                <td>${transaction.tags.join(", ")}</td>
+                <td><button class="editBtn" data-id="${transaction.id}">Edit</button></td>
+            `;
+                transactionsBody.appendChild(row);
+            });
+        }
+
+        document.getElementById("transactionsBody").addEventListener("click", function(event) {
+            if (event.target.classList.contains("editBtn")) {
+                const transactionId = parseInt(event.target.getAttribute("data-id"));
+                console.log("Clicked edit button for transaction ID:", transactionId);
+                handleEditTransaction(transactionId);
+            }
+        });
+
+        let currentlyEditingTransactionId;
+        function handleEditTransaction(id) {
+
+            currentlyEditingTransactionId = id;
+
+            const transaction = transactions.find(t => t.id === id);
+            if (!transaction) {
+                console.error('Transaction not found.');
+                return;
+            }
+            document.getElementById("editAmount").value = transaction.amount;
+            document.getElementById("editCategory").value = transaction.category;
+            document.getElementById("editTags").value = transaction.tags.join(", ");
+            document.getElementById("editTransactionId").value = transaction.id;
+
+            document.getElementById("editTransaction").style.display = "block";
+        }
+
+        document.getElementById("editTransactionForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            const transactionId = parseInt(document.getElementById("editTransactionId").value);
+
+            const updatedAmount = parseFloat(document.getElementById("editAmount").value);
+            const updatedCategory = document.getElementById("editCategory").value;
+            const updatedTags = document.getElementById("editTags").value.split(",").map(tag => tag.trim());
+
+            const transactionIndex = transactions.findIndex(t => t.id === transactionId);
+            const transactionToUpdate = transactions[transactionIndex];
+
+            transactionToUpdate.amount = updatedAmount;
+            transactionToUpdate.category = updatedCategory;
+            transactionToUpdate.tags = updatedTags;
+
+            fetch(`http://localhost:8080/transactions/${transactionId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(transactionToUpdate),
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to update transaction.');
+                    }
+                    return response.json();
+                })
+                .then(updatedTransaction => {
+                    transactions[transactionIndex] = updatedTransaction;
+
+                    document.getElementById("editTransaction").style.display = "none";
+
+                    displayTransactions(transactions);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to update transaction.');
+                });
+        });
+    });
+</script>
+</body>
+</html>
